@@ -204,6 +204,15 @@ class SoftKeyboardTest {
         val toDelete = BackspaceHelper.fallbackBackspace(text, "S", false)
         // Should delete " How are you?"
         assertEquals(13, toDelete)
+
+        // Without trailing question mark
+        val text2 = "Hello world. How are you"
+        val toDelete2 = BackspaceHelper.fallbackBackspace(text2, "S", false)
+        assertEquals(12, toDelete2)
+
+        // Only one sentence
+        val text3 = "Only one sentence."
+        assertEquals(text3.length, BackspaceHelper.fallbackBackspace(text3, "S", false))
     }
 
     @Test
@@ -212,6 +221,11 @@ class SoftKeyboardTest {
         val toDelete = BackspaceHelper.fallbackBackspace(text, "L", false)
         // Should delete "Second line"
         assertEquals("Second line".length, toDelete)
+
+        // Line with trailing newline
+        val text2 = "First line\nSecond line\n"
+        val toDelete2 = BackspaceHelper.fallbackBackspace(text2, "L", false)
+        assertEquals("Second line\n".length, toDelete2)
     }
 
     @Test

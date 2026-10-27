@@ -36,22 +36,38 @@ object BackspaceHelper {
             mode == "C" || mode == ". " -> 0
             mode == "S" -> {
                 // Delete sentence punctuation (. ! ? \n)
-                // First skip any trailing whitespace or punctuation at the cursor
-                val trimmed = backbuf.trimEnd(' ', '\t')
-                val idx = trimmed.lastIndexOfAny(charArrayOf('.', '!', '?', '\n'))
-                if (idx != -1) {
-                    backbuf.length - (idx + 1)
-                } else {
+                // Skip trailing punctuation and whitespace at the cursor to find preceding boundary
+                var pos = backbuf.length - 1
+                while (pos >= 0 && (backbuf[pos] in " .!?\t\n\r")) {
+                    pos--
+                }
+                if (pos < 0) {
                     backbuf.length
+                } else {
+                    val idx = backbuf.lastIndexOfAny(charArrayOf('.', '!', '?', '\n'), pos)
+                    if (idx != -1) {
+                        backbuf.length - (idx + 1)
+                    } else {
+                        backbuf.length
+                    }
                 }
             }
             mode == "L" -> {
                 // Delete line (up to newline)
-                val idx = backbuf.lastIndexOf('\n')
-                if (idx != -1) {
-                    backbuf.length - (idx + 1)
-                } else {
+                // Skip trailing newline at cursor if any
+                var pos = backbuf.length - 1
+                while (pos >= 0 && (backbuf[pos] == '\n' || backbuf[pos] == '\r')) {
+                    pos--
+                }
+                if (pos < 0) {
                     backbuf.length
+                } else {
+                    val idx = backbuf.lastIndexOf('\n', pos)
+                    if (idx != -1) {
+                        backbuf.length - (idx + 1)
+                    } else {
+                        backbuf.length
+                    }
                 }
             }
             mode == "emjf" -> {

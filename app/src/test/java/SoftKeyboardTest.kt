@@ -129,7 +129,11 @@ class MockInputConnection(initialText: String = "", initialSelStart: Int = initi
     override fun deleteSurroundingTextInCodePoints(beforeLength: Int, afterLength: Int): Boolean = deleteSurroundingText(beforeLength, afterLength)
     override fun commitCompletion(text: CompletionInfo?): Boolean = true
     override fun commitCorrection(correctionInfo: CorrectionInfo?): Boolean = true
-    override fun sendKeyEvent(event: KeyEvent?): Boolean = true
+    val sentKeyEvents = mutableListOf<KeyEvent>()
+    override fun sendKeyEvent(event: KeyEvent?): Boolean {
+        if (event != null) sentKeyEvents.add(event)
+        return true
+    }
     override fun clearMetaKeyStates(states: Int): Boolean = true
     override fun reportFullscreenMode(enabled: Boolean): Boolean = true
     override fun performPrivateCommand(action: String?, data: Bundle?): Boolean = true
@@ -404,5 +408,47 @@ class SoftKeyboardTest {
         controller.performSetSelection(0, 6, false, false, ic) { events.add(it) }
         assertEquals(11, controller.selectionStart)
         assertEquals(11, ic.selStart)
+    }
+
+    @Test
+    fun testBackspaceEmptyBufferSendsDelKeyEvent() {
+        val controller = TextSyncController()
+        val ic = MockInputConnection("", 0, 0)
+        val events = mutableListOf<TextBoxEvent>()
+
+        controller.onStartInputView(0, 0, "", "", "", ic) { events.add(it) }
+        controller.processOperation(TextOp.SimpleBackspace(true), null, ic, null, { events.add(it) }, {})
+
+        assertEquals(2, ic.sentKeyEvents.size)
+        assertEquals(KeyEvent.ACTION_DOWN, ic.sentKeyEvents[0].action)
+        assertEquals(KeyEvent.KEYCODE_DEL, ic.sentKeyEvents[0].keyCode)
+        assertEquals(KeyEvent.ACTION_UP, ic.sentKeyEvents[1].action)
+        assertEquals(KeyEvent.KEYCODE_DEL, ic.sentKeyEvents[1].keyCode)
+    }
+
+    @Test
+    fun testBackspaceEmojiSurrogatePairInController() {
+        val controller = TextSyncController()
+        val ic = MockInputConnection("Hello👋", 7, 7)
+        val events = mutableListOf<TextBoxEvent>()
+
+        controller.onStartInputView(7, 7, "Hello👋", "", "", ic) { events.add(it) }
+        controller.processOperation(TextOp.SimpleBackspace(true), null, ic, null, { events.add(it) }, {})
+
+        // Emoji 👋 is 2 chars, so length drops by 2 to "Hello"
+        assertEquals("Hello", ic.currentText)
+        assertEquals(5, controller.selectionStart)
+    }
+
+    @Test
+    fun testSignalWordDestructionAndEvent() {
+        // Ensure static method exists and does not crash even without an active keyboard service
+        com.jormy.nin.SoftKeyboard.signalWordDestruction("apple", "apples")
+
+        val event = TextBoxEvent.fromType(TextEventType.WORD_DESTRUCTION, "apple", "apples")
+        assertTrue(event is TextBoxEvent.WordDestruction)
+        val wordDes = event as TextBoxEvent.WordDestruction
+        assertEquals("apple", wordDes.destroyedWord)
+        assertEquals("apples", wordDes.destroyedString)
     }
 }

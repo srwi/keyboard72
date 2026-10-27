@@ -11,8 +11,12 @@ object BackspaceHelper {
      */
     fun processBackspace(backbuf: String, mode: String?, singleCharacterMode: Boolean): Int {
         if (backbuf.isEmpty()) return 0
+        if (singleCharacterMode || mode == null || mode.isEmpty()) {
+            return fallbackBackspace(backbuf, mode, singleCharacterMode)
+        }
         try {
-            val count = NINLib.processBackspaceAllowance(backbuf, mode ?: "", if (singleCharacterMode) 1 else 0)
+            val safeBuf = if (backbuf.length > 120) backbuf.substring(backbuf.length - 120) else backbuf
+            val count = NINLib.processBackspaceAllowance(safeBuf, mode, if (singleCharacterMode) 1 else 0)
             if (count > 0) return minOf(count, backbuf.length)
         } catch (_: Throwable) {
             // Native lib not loaded or test environment

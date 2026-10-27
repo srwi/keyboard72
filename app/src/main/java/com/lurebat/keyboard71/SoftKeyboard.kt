@@ -220,31 +220,33 @@ class SoftKeyboard : InputMethodService() {
 
     fun relayDelayedEvents() {
         while (true) {
-            val event = textBoxEventQueue.poll()
-            if (event != null && BuildConfig.DEBUG) {
+            val event = textBoxEventQueue.poll() ?: break
+            if (BuildConfig.DEBUG) {
                 Log.d("NIN", "Relaying delayed event: $event")
             }
-            when (event) {
-                is TextBoxEvent.AppFieldChange -> {
-                    NINLib.setFieldTypes(event.keyboardType, event.returnKeyType)
-                    onChangeAppOrTextbox(event.packageName, event.field, event.mode)
+            try {
+                when (event) {
+                    is TextBoxEvent.AppFieldChange -> {
+                        NINLib.setFieldTypes(event.keyboardType, event.returnKeyType)
+                        onChangeAppOrTextbox(event.packageName, event.field, event.mode)
+                    }
+
+                    TextBoxEvent.Reset -> onExternalSelChange()
+
+                    is TextBoxEvent.Selection -> onTextSelection(
+                        event.textBefore,
+                        event.currentWord,
+                        event.textAfter,
+                        event.mode
+                    )
+
+                    is TextBoxEvent.WordDestruction -> onWordDestruction(
+                        event.destroyedWord,
+                        event.destroyedString
+                    )
                 }
-
-                TextBoxEvent.Reset -> onExternalSelChange()
-
-                is TextBoxEvent.Selection -> onTextSelection(
-                    event.textBefore,
-                    event.currentWord,
-                    event.textAfter,
-                    event.mode
-                )
-
-                is TextBoxEvent.WordDestruction -> onWordDestruction(
-                    event.destroyedWord,
-                    event.destroyedString
-                )
-
-                null -> break
+            } catch (t: Throwable) {
+                Log.e(TAG, "Error relaying event $event", t)
             }
         }
     }

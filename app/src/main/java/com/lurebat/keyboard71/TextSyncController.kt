@@ -1,5 +1,7 @@
 package com.lurebat.keyboard71
 
+import android.os.SystemClock
+import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -333,35 +335,26 @@ class TextSyncController {
         dispatchEvent: (TextBoxEvent) -> Unit
     ) {
         if (hasCandidate) {
-            val candLen = candidateEnd - candidateStart
-            val startPos = candidateStart
+            ic.setComposingText("", 1)
+            val startPos = minOf(candidateStart, selectionStart)
             candidateStart = -1
             candidateEnd = -1
             selectionStart = startPos
             selectionEnd = startPos
-            ic.setComposingRegion(startPos, startPos)
-            ic.setSelection(startPos, startPos)
-            ic.deleteSurroundingText(0, candLen)
-            signalCursorCandidacyResult(ic, mode ?: "setselle", dispatchEvent)
             return
         }
 
         if (hasSelection) {
+            ic.commitText("", 1)
             val minPos = minOf(selectionStart, selectionEnd)
-            val maxPos = maxOf(selectionStart, selectionEnd)
-            val selLen = maxPos - minPos
             selectionStart = minPos
             selectionEnd = minPos
             candidateStart = -1
             candidateEnd = -1
-            ic.setComposingRegion(minPos, minPos)
-            ic.setSelection(minPos, minPos)
-            ic.deleteSurroundingText(0, selLen)
-            signalCursorCandidacyResult(ic, mode ?: "setselle", dispatchEvent)
             return
         }
 
-        val backBuf = ic.getTextBeforeCursor(200, 0)?.toString() ?: ""
+        val backBuf = ic.getTextBeforeCursor(120, 0)?.toString() ?: ""
         if (backBuf.isNotEmpty()) {
             val delCount = BackspaceHelper.processBackspace(backBuf, mode, singleCharacterMode)
             if (delCount > 0) {
@@ -369,8 +362,11 @@ class TextSyncController {
                 selectionStart = maxOf(0, selectionStart - delCount)
                 selectionEnd = selectionStart
             }
+        } else {
+            val eventTime = SystemClock.uptimeMillis()
+            ic.sendKeyEvent(KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL, 0, 0))
+            ic.sendKeyEvent(KeyEvent(eventTime, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL, 0, 0))
         }
-        signalCursorCandidacyResult(ic, mode ?: "setselle", dispatchEvent)
     }
 
     fun performCursorMovement(

@@ -3,9 +3,13 @@ name: Build Keyboard 72 APK
 on:
   push:
     branches: [ "**" ]
+    tags: [ "v*" ]
   pull_request:
     branches: [ "**" ]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -50,3 +54,21 @@ jobs:
           name: keyboard72-apk
           path: app/build/outputs/apk/**/*.apk
           retention-days: 30
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/fix/text-sync-and-ci'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest-build' }}
+          name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'Keyboard 72 Latest Build' }}
+          body: |
+            Automatischer Build von Keyboard 72 mit behobener Textfeld-Synchronisation.
+            
+            - **Text-Synchronisation überarbeitet**: Ersetzt den fehlerhaften Rope-Cache durch `TextSyncController`.
+            - **Autokorrektur & Wort-Ersetzung**: Korrekte Byte-zu-Zeichen-Rückrechnung ohne Cursor-Verrutschen.
+            - **Backspace & Löschmodi**: Sicheres Löschen mit Schutz vor unvollständigen Surrogate-Pairs.
+            - **Unit-Tests**: 18 automatisierte Tests für alle Text- und Cursor-Operationen.
+          files: app/build/outputs/apk/release/app-release.apk
+          prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

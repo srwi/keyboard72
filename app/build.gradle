@@ -74,6 +74,9 @@ android {
         abortOnError false
         checkReleaseBuilds false
     }
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
     sourceSets {
         main {
             java {
@@ -144,6 +147,7 @@ dependencies {
     implementation 'org.jetbrains:annotations:24.0.1'
     implementation 'androidx.datastore:datastore-preferences-android:1.1.0-alpha04'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.3'
+    testImplementation 'junit:junit:4.13.2'
     implementation 'com.github.alorma:compose-settings-ui-m3:0.27.0'
     implementation 'com.github.alorma:compose-settings-storage-datastore:0.27.0'
 
